@@ -5,7 +5,7 @@
 <ul id='chat-items'>
 {% for chat in object.chatmessage_set.all %}
 
-<li>{{ chat.message }} via {{ chat.user }}</li>
+<li>{{ chat.message }} via <b>{{ chat.user }}</b> at <i>{{chat.timestamp}}</i></li>
 
 {% endfor %}
 </ul>
@@ -19,8 +19,51 @@
 
 {% block script %}
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.js"></script>
 <script>
 // websocket scripts
+let ws = 'wss://'
+let formData = $('#form')
+let msgInput = $('#id_message')
+let chatHolder = $('#chat-items')
+if (window.location.protocol == 'http:'){
+    console.log('http')
+    ws = 'ws://'
+}
+let endpoint = ws + window.location.host + window.location.pathname
+let socket = new ReconnectingWebSocket(endpoint)
+
+socket.onmessage = (e) =>{
+    data = JSON.parse(e.data)
+    chatHolder.append(
+        '<li>'+ 
+        data.message + 
+        ' via '+ 
+        '<b>'+
+        data.username+
+        '</b>'+
+        ' at '+
+        '<i>' +
+        data.sent_time +
+        '</i></li>')
+    console.log("message", e)
+}
+socket.onopen = (e) =>{
+    console.log("open", e)
+    formData.submit(event => {
+        event.preventDefault()
+        let msgText = msgInput.val()
+        let finalData = {'message': msgText}
+        socket.send(JSON.stringify(finalData))
+        msgInput.val('')
+    })
+}
+socket.onerror = (e) =>{
+    console.log("error", e)
+}
+socket.onclose = (e) =>{
+    console.log("close", e)
+}
 
 </script>
 {% endblock %}
